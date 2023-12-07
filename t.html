@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>통 안의 작은 공들</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+  <style>
+        /* 전체 딤처리 레이어 스타일 */
+        .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 팝업 스타일 */
+    .popup {
+      background: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+
+    body { 
+      margin: 0; 
+    }
+    #game_canvas {
+      margin: 0px 20px 0px 20px;
+    }
+    #start_btn {
+      margin: 20px;
+      width: 200px;
+      height: 50px; 
+      font-size: 30px;
+    }
+  </style>
+</head>
+<body>
+  <p>현재상품 현황 => 파랑:<span id="bcnt"></span>개, 빨강:<span id="rcnt"></span>개, 노랑:<span id="ycnt"></span>개</p>
+  <button id="start_btn" onclick="getItem();">뽑기 버튼</button>
+  <div id="game_canvas"></div>
+
+<!-- 전체 딤처리 레이어 -->
+<div id="overlay" class="overlay">
+  <!-- 팝업 내용 -->
+  <div id="popup" class="popup">
+    <p>팝업 내용입니다.</p>
+    <button id="closeBtn">닫기</button>
+  </div>
+</div>
+
+<script>
+const gameCanvasDiv = document.getElementById("game_canvas");
+const beadSize = 20;
+
+const beadList = {
+  beadBlue: 40,
+  beadRed: 15,
+  beadYellow: 5
+};
+editScore();
+
+// Phaser 게임 설정
+var config = {
+    parent: "game_canvas",
+    type: Phaser.AUTO,
+    width: gameCanvasDiv.clientWidth,
+    height: 600,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0 },
+            debug: false
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create
+    }
+};
+
+// Phaser 게임 생성
+var game = new Phaser.Game(config);
+
+// 필요한 이미지 미리 로드
+function preload ()
+{
+    this.load.image('bead_blue', '/bead_blue.png');
+    this.load.image('bead_red', '/bead_red.png');
+    this.load.image('bead_yellow', '/bead_yellow.png');
+}
+
+// 그릇과 구슬들 추가
+function create ()
+{
+  const beadArr = getBeadArr();
+
+    // 구슬들을 랜덤한 위치에 추가하고 중력 적용
+    var beads = this.physics.add.group();
+
+    if(beadArr.length == 0) {
+      return;
+    }
+      
+    // 일정 간격으로 함수를 호출하여 공 생성
+    this.time.addEvent({
+        delay: 50, // 밀리초 단위의 간격 (1초마다)
+        // loop: true, // 반복 여부
+        repeat: beadArr.length - 1,
+        callback: function() {
+          var x = Phaser.Math.Between(50, gameCanvasDiv.clientWidth - 50);
+          var y = Phaser.Math.Between(0, 200);
+          // var y = 200;
+          var beadColor = beadArr.pop();
+          var bead = beads.create(x, y, beadColor);
+          bead.setGravityY(400);
+          // 초기 속도를 설정하여 중력에 바로 영향을 받도록 함
+          bead.setVelocityY(100);
+          bead.setDisplaySize(beadSize, beadSize);
+          bead.setBounce(0.8);
+          // 구슬 이미지의 중심을 중심점으로 설정
+          bead.setCircle(bead.width / 2, 0, 0);
+          bead.setCollideWorldBounds(true);
+
+          // // 새로운 구슬이 추가될 때 기존의 구슬들과의 겹침을 확인하고 처리
+          // this.physics.world.overlap(beads.getChildren(), function(bead1, bead2) {
+          //   // 겹친 구슬을 살짝 이동시켜 겹침을 해소
+          //   bead1.setX(bead1.x + Phaser.Math.Between(-10, 10));
+          //   bead1.setY(bead1.y + Phaser.Math.Between(-10, 10));
+          // }, null, this);
+        }, // 호출할 함수
+        callbackScope: this // 함수 내부에서 this를 사용할 수 있도록 설정
+    });
+
+    // 각 구슬에 원형의 충돌 영역 설정
+    beads.children.iterate(function(bead) {
+
+    });
+
+    // 그릇과 구슬들이 서로 충돌하도록 설정
+    this.physics.add.collider(beads, beads);
+}
+
+function getItem() {
+  const beadArr = getBeadArr();
+  if(beadArr.length == 0) {
+    return;
+  }
+
+  var chkBead = beadArr.pop();
+  if(chkBead == 'bead_blue') {
+    beadList.beadBlue = beadList.beadBlue - 1;
+  } else if(chkBead == 'bead_red') {
+    beadList.beadRed = beadList.beadRed - 1;
+  } else {
+    beadList.beadYellow = beadList.beadYellow - 1;
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function getBeadArr() {
+  const beadArr = [];
+  for(let i = 0; i < beadList.beadBlue; i++) {
+    beadArr.push("bead_blue");
+  }
+  for(let i = 0; i < beadList.beadRed; i++) {
+    beadArr.push("bead_red");
+  }
+  for(let i = 0; i < beadList.beadYellow; i++) {
+    beadArr.push("bead_yellow");
+  }
+  for (let i = beadArr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [beadArr[i], beadArr[j]] = [beadArr[j], beadArr[i]];
+  }
+
+  return beadArr;
+}
+
+
+var closeBtn = document.getElementById('closeBtn');
+var overlay = document.getElementById('overlay');
+
+// 팝업 닫기
+closeBtn.addEventListener('click', function() {
+  overlay.style.display = 'none';
+  // 현재 게임 인스턴스가 존재하면 파괴
+  if (game) {
+    game.destroy();
+    // 게임이 파괴되면서 캔버스도 남아있을 수 있으므로 제거
+    gameCanvasDiv.removeChild(game.canvas);
+  }
+  game = new Phaser.Game(config);
+  editScore();
+});
+
+// 딤처리된 영역을 클릭하면 팝업 닫기
+overlay.addEventListener('click', function(event) {
+  overlay.style.display = 'none';
+  // 현재 게임 인스턴스가 존재하면 파괴
+  if (game) {
+    game.destroy();
+    // 게임이 파괴되면서 캔버스도 남아있을 수 있으므로 제거
+    gameCanvasDiv.removeChild(game.canvas);
+  }
+  game = new Phaser.Game(config);
+  editScore();
+});
+
+function editScore() {
+  document.getElementById('bcnt').innerHTML = beadList.beadBlue;
+  document.getElementById('ycnt').innerHTML = beadList.beadYellow;
+  document.getElementById('rcnt').innerHTML = beadList.beadRed;
+}
+</script>
+
+</body>
+</html>
